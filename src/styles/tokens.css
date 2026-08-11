@@ -1,0 +1,64 @@
+/*
+  Woven Canvas design tokens.
+  Theme resolution order: [data-theme] attribute (user override, persisted)
+  > prefers-color-scheme (system default). Never pure #000/#fff.
+*/
+
+:root {
+  --font-display: "Outfit", -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-mono: "IBM Plex Mono", "SFMono-Regular", monospace;
+
+  --radius: 12px;
+  --radius-sm: 8px;
+  --radius-pill: 999px;
+
+  --accent: #3b4fa3;
+  --accent-strong: #2e3d82;
+  --accent-soft: rgba(59, 79, 163, 0.12);
+
+  --nav-height: 64px;
+  --content-max: 1160px;
+
+  --ease-standard: cubic-bezier(0.16, 1, 0.3, 1);
+
+  color-scheme: light dark;
+}
+
+/* Light (default) */
+:root,
+:root[data-theme="light"] {
+  --bg: #edece8;
+  --bg-elevated: #f5f4f1;
+  --text: #2a2b2e;
+  --text-muted: #5a5b60;
+  --border: rgba(59, 79, 163, 0.35);
+  --border-faint: rgba(42, 43, 46, 0.12);
+  --texture-line: rgba(42, 43, 46, 0.045);
+  --shadow: 0 10px 30px rgba(42, 43, 46, 0.08);
+}
+
+/* Dark override via explicit attribute */
+:root[data-theme="dark"] {
+  --bg: #14161c;
+  --bg-elevated: #1b1e26;
+  --text: #e8e8ea;
+  --text-muted: #a3a5ac;
+  --border: rgba(122, 145, 232, 0.4);
+  --border-faint: rgba(232, 232, 234, 0.12);
+  --texture-line: rgba(232, 232, 234, 0.05);
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+/* System dark preference, only applies when user has not overridden */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not([data-theme="dark"]) {
+    --bg: #14161c;
+    --bg-elevated: #1b1e26;
+    --text: #e8e8ea;
+    --text-muted: #a3a5ac;
+    --border: rgba(122, 145, 232, 0.4);
+    --border-faint: rgba(232, 232, 234, 0.12);
+    --texture-line: rgba(232, 232, 234, 0.05);
+    --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  }
+}
