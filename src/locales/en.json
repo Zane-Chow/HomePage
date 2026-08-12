@@ -26,8 +26,8 @@
   "about.bio2": "I like building and maintaining services myself, from writing code to running the servers behind them. I tend to learn best by actually doing.",
   "about.skillsTitle": "Skills and tools",
   "about.timelineTitle": "A few milestones",
-  "about.timeline.2025": "Started Computer Science at Universiti Malaya",
-  "about.timeline.2026": "Kept building and self-hosting side projects and services",
+  "about.timeline.2025": "Kept building and self-hosting side projects and services",
+  "about.timeline.2026": "Started Computer Science at Universiti Malaya",
 
   "infra.title": "Self-hosted infrastructure",
   "infra.lead": "A few services I build and maintain in my spare time, spread across several countries and regions, monitored live by Komari.",
