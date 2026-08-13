@@ -288,7 +288,7 @@ function renderProjects(): void {
       <article class="project-featured" data-project="${p.id}">
         ${
           p.image
-            ? `<img class="project-featured__media" src="${p.image}" alt="" loading="lazy" />`
+            ? `<img class="project-featured__media" src="${p.image}" alt="${t(`${p.id}.imageAlt`)}" loading="lazy" />`
             : `<div class="project-featured__media" data-i18n="projects.media.placeholder"></div>`
         }
         <div>
@@ -323,7 +323,7 @@ function renderProjects(): void {
         <h3 class="modal__title" data-i18n="${project.titleKey}"></h3>
         ${
           project.image
-            ? `<img class="modal__media" src="${project.image}" alt="" loading="lazy" />`
+            ? `<img class="modal__media" src="${project.image}" alt="${t(`${project.id}.imageAlt`)}" loading="lazy" />`
             : `<div class="modal__media" data-i18n="projects.media.placeholder"></div>`
         }
         <p class="modal__desc" data-i18n="${project.detailKey ?? project.descKey}"></p>
@@ -407,4 +407,3 @@ renderInfraStats();
 
 // Ensure the empty i18n keys used as placeholders (e.g. tag on non-featured items) don't render "undefined"
 document.querySelectorAll<HTMLElement>('[data-i18n=""]').forEach((el) => el.remove());
-

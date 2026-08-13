@@ -1,5 +1,6 @@
 import en from "./locales/en.json";
 import zh from "./locales/zh.json";
+import { updateSeo } from "./seo";
 
 export type Lang = "en" | "zh";
 
@@ -8,6 +9,7 @@ const dictionaries: Record<Lang, Record<string, string>> = { en, zh };
 const STORAGE_KEY = "pw-lang";
 
 function detectLang(): Lang {
+  if (window.location.hostname.endsWith(".cn")) return "zh";
   const stored = localStorage.getItem(STORAGE_KEY);
   if (stored === "en" || stored === "zh") return stored;
   return navigator.language.toLowerCase().startsWith("zh") ? "zh" : "en";
@@ -27,7 +29,7 @@ export function t(key: string): string {
 export function setLang(lang: Lang): void {
   currentLang = lang;
   localStorage.setItem(STORAGE_KEY, lang);
-  document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
+  updateSeo(lang);
   applyTranslations();
   listeners.forEach((fn) => fn(lang));
 }
@@ -53,6 +55,6 @@ export function applyTranslations(): void {
 }
 
 export function initI18n(): void {
-  document.documentElement.lang = currentLang === "zh" ? "zh-CN" : "en";
+  updateSeo(currentLang);
   applyTranslations();
 }

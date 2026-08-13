@@ -47,6 +47,7 @@
   "projects.title": "项目",
   "projects.lead": "一些自己写的和维护的项目,点击卡片可以看更多细节。",
   "projects.authrouter.tag": "重点项目",
+  "authrouter.imageAlt": "AuthRouter 身份提供方网关项目截图",
   "projects.authrouter.title": "AuthRouter",
   "projects.authrouter.desc": "把多个身份提供方(IdP)整合到一个统一的登录入口,只需要调用一个端点就能完成登录,并支持在不同身份提供方之间做身份映射。",
   "projects.authrouter.detail": "很多系统会同时接入好几个身份提供方,用户登录时经常要在不同入口之间跳转,身份信息也难以统一。AuthRouter 把这些入口整合成一个,调用方只需要对接一个端点,就能把登录请求路由到正确的上游,并把不同上游的身份信息映射成统一的格式。",

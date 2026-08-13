@@ -47,6 +47,7 @@
   "projects.title": "Projects",
   "projects.lead": "Things I've written and maintained. Click a card for more detail.",
   "projects.authrouter.tag": "Featured",
+  "authrouter.imageAlt": "AuthRouter identity provider gateway project screenshot",
   "projects.authrouter.title": "AuthRouter",
   "projects.authrouter.desc": "Consolidates multiple identity providers behind a single login endpoint, with identity mapping across providers.",
   "projects.authrouter.detail": "Systems that connect to several identity providers often force users to jump between different login entry points, and identity data ends up scattered across them. AuthRouter merges these into one endpoint: callers integrate once, and requests get routed to the right upstream provider with identities mapped into a consistent format.",
