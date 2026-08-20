@@ -45,10 +45,9 @@ export interface NodeLocationsFile {
 }
 
 export interface NodeLocationBuildOptions {
+  komariBaseUrl: string;
   komariApiKey?: string;
 }
-
-const KOMARI_BASE_URL = "https://ops.zhouhaoze.top";
 
 function isPrivateIp(ip: string): boolean {
   if (ip.includes(":")) {
@@ -91,23 +90,36 @@ async function fetchJson(url: string, init?: RequestInit): Promise<Record<string
   return response.json() as Promise<Record<string, unknown>>;
 }
 
+function numberValue(value: unknown): number | null {
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 function geoResult(
   latValue: unknown,
   lngValue: unknown,
-  cityValue: unknown,
-  countryValue: unknown,
-  countryCodeValue: unknown,
+  city: unknown,
+  country: unknown,
+  countryCode: unknown,
 ): GeoResult | null {
-  const lat = Number(latValue);
-  const lng = Number(lngValue);
-  if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
+  const lat = numberValue(latValue);
+  const lng = numberValue(lngValue);
+  if (lat === null || lng === null || Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
   return {
     lat,
     lng,
-    city: typeof cityValue === "string" ? cityValue : "",
-    country: typeof countryValue === "string" ? countryValue : "",
-    countryCode: typeof countryCodeValue === "string" ? countryCodeValue : "",
+    city: typeof city === "string" ? city : "",
+    country: typeof country === "string" ? country : "",
+    countryCode: typeof countryCode === "string" ? countryCode : "",
   };
+}
+
+async function locateWithIpWho(ip: string): Promise<GeoResult | null> {
+  const data = await fetchJson(
+    `https://ipwho.is/${encodeURIComponent(ip)}?fields=success,country,country_code,city,latitude,longitude`,
+  );
+  if (data.success !== true) return null;
+  return geoResult(data.latitude, data.longitude, data.city, data.country, data.country_code);
 }
 
 async function locateWithIpSb(ip: string): Promise<GeoResult | null> {
@@ -122,28 +134,15 @@ async function locateWithIpinfo(ip: string): Promise<GeoResult | null> {
   return geoResult(lat, lng, data.city, data.country, data.country);
 }
 
-async function locateWithIpWho(ip: string): Promise<GeoResult | null> {
-  const data = await fetchJson(
-    `https://ipwho.is/${encodeURIComponent(ip)}?fields=success,country,country_code,city,latitude,longitude`,
-  );
-  if (data.success !== true) return null;
-  return geoResult(data.latitude, data.longitude, data.city, data.country, data.country_code);
-}
-
-async function locateWithIpapi(ip: string): Promise<GeoResult | null> {
-  const data = await fetchJson(`https://ipapi.co/${encodeURIComponent(ip)}/json/`);
-  if (data.error === true) return null;
-  return geoResult(data.latitude, data.longitude, data.city, data.country_name, data.country_code);
-}
-
 async function locateIp(ip: string): Promise<GeoResult | null> {
-  const providers = [locateWithIpSb, locateWithIpinfo, locateWithIpWho, locateWithIpapi];
+  const providers = [() => locateWithIpWho(ip), () => locateWithIpSb(ip), () => locateWithIpinfo(ip)];
+
   for (const provider of providers) {
     try {
-      const result = await provider(ip);
-      if (result) return result;
+      const location = await provider();
+      if (location) return location;
     } catch {
-      // Continue in provider order; the client keeps its country-level fallback if all fail.
+      // Try the next provider; the country-level fallback remains available in the client.
     }
   }
   return null;
@@ -164,8 +163,8 @@ async function mapWithConcurrency<T, R>(items: T[], limit: number, worker: (item
   return results;
 }
 
-async function fetchKomariNodes(apiKey: string): Promise<KomariNode[]> {
-  const payload = await fetchJson(`${KOMARI_BASE_URL}/api/rpc2`, {
+async function fetchKomariNodes(baseUrl: string, apiKey: string): Promise<KomariNode[]> {
+  const payload = await fetchJson(`${baseUrl.replace(/\/$/, "")}/api/rpc2`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -179,19 +178,19 @@ async function fetchKomariNodes(apiKey: string): Promise<KomariNode[]> {
   return Object.values(rpc.result).filter((node) => !node.hidden);
 }
 
-async function fetchPublicNodes(): Promise<PublicNode[]> {
-  const payload = (await fetchJson(`${KOMARI_BASE_URL}/api/nodes`)) as KomariNodesResponse;
+async function fetchPublicNodes(baseUrl: string): Promise<PublicNode[]> {
+  const payload = (await fetchJson(`${baseUrl.replace(/\/$/, "")}/api/nodes`)) as KomariNodesResponse;
   if (!Array.isArray(payload.data)) throw new Error("Komari public API returned an invalid node list.");
   return payload.data.map((node) => ({ uuid: node.uuid, name: node.name, region: node.region ?? "" }));
 }
 
 export async function generateNodeLocations(options: NodeLocationBuildOptions): Promise<NodeLocationsFile> {
-  const publicNodes = await fetchPublicNodes();
+  const publicNodes = await fetchPublicNodes(options.komariBaseUrl);
   if (!options.komariApiKey) {
     return { version: 1, generatedAt: new Date().toISOString(), nodes: publicNodes, locations: [] };
   }
 
-  const nodes = await fetchKomariNodes(options.komariApiKey);
+  const nodes = await fetchKomariNodes(options.komariBaseUrl, options.komariApiKey);
   const nodesWithIp = nodes.flatMap((node) => {
     const ip = firstPublicIp(node);
     return ip ? [{ node, ip }] : [];

@@ -25,10 +25,33 @@ function buildPoints(snapshot: InfraSnapshot): GlobePoint[] {
     return fallback ? [{ lat: fallback.lat, lng: fallback.lng, count: 1 }] : [];
   });
 
-  if (points.length) return points;
+  if (points.length) return spreadOverlappingPoints(points);
   return snapshot.regionBreakdown.flatMap(({ flag, count }) => {
     const info = flagToRegionInfo(flag);
     return info ? [{ lat: info.lat, lng: info.lng, count }] : [];
+  });
+}
+
+function spreadOverlappingPoints(points: GlobePoint[]): GlobePoint[] {
+  const groups = new Map<string, GlobePoint[]>();
+  for (const point of points) {
+    const key = `${point.lat.toFixed(3)},${point.lng.toFixed(3)}`;
+    const group = groups.get(key) ?? [];
+    group.push(point);
+    groups.set(key, group);
+  }
+
+  return Array.from(groups.values()).flatMap((group) => {
+    if (group.length === 1) return group;
+    return group.map((point, index) => {
+      const angle = (index / group.length) * Math.PI * 2;
+      const radius = 0.28 + Math.floor(index / 8) * 0.12;
+      return {
+        ...point,
+        lat: Math.max(-89.9, Math.min(89.9, point.lat + Math.sin(angle) * radius)),
+        lng: point.lng + Math.cos(angle) * radius,
+      };
+    });
   });
 }
 
@@ -54,6 +77,7 @@ export function mountGlobe(container: HTMLElement, snapshot: InfraSnapshot): () 
   const points = buildPoints(snapshot);
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   let accent = cssVar("--accent", "#3b4fa3");
+  let textColor = cssVar("--text", "#f5f4f1");
   let globeBase = cssVar("--bg-elevated", "#1b1e26");
   const topology = countriesTopology as unknown as Topology;
   const countries = feature(topology, topology.objects.countries as GeometryCollection);
@@ -104,6 +128,18 @@ export function mountGlobe(container: HTMLElement, snapshot: InfraSnapshot): () 
     .pointAltitude(0.018)
     .pointRadius(0.42);
 
+  globe
+    .labelsData(points)
+    .labelLat("lat")
+    .labelLng("lng")
+    .labelText(() => "")
+    .labelSize(1.15)
+    .labelColor(() => textColor)
+    .labelDotRadius(0.32)
+    .labelDotOrientation("bottom")
+    .labelResolution(3)
+    .labelAltitude(0.022);
+
   if (!reduceMotion) {
     globe.ringsData(points).ringLat("lat").ringLng("lng").ringColor(() => (t: number) => hexToRgba(accent, 1 - t)).ringMaxRadius(5).ringPropagationSpeed(1.5).ringRepeatPeriod(2200);
   }
@@ -111,6 +147,7 @@ export function mountGlobe(container: HTMLElement, snapshot: InfraSnapshot): () 
 
   function repaint(): void {
     accent = cssVar("--accent", "#3b4fa3");
+    textColor = cssVar("--text", "#f5f4f1");
     globeBase = cssVar("--bg-elevated", "#1b1e26");
     globeMaterial.color.set(globeBase);
     globe
@@ -118,7 +155,8 @@ export function mountGlobe(container: HTMLElement, snapshot: InfraSnapshot): () 
       .polygonSideColor(() => hexToRgba(accent, 0.04))
       .polygonStrokeColor(() => hexToRgba(accent, 0.48))
       .atmosphereColor(accent)
-      .pointColor(() => accent);
+      .pointColor(() => accent)
+      .labelColor(() => textColor);
     if (!reduceMotion) {
       globe.ringColor(() => (t: number) => hexToRgba(accent, 1 - t));
     }

@@ -112,6 +112,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const variant = resolveVariant(process.env.SITE_VARIANT ?? env.SITE_VARIANT);
   const nodeLocationOptions = {
+    komariBaseUrl: process.env.KOMARI_BASE_URL ?? env.KOMARI_BASE_URL ?? "https://ops.zhouhaoze.top",
     komariApiKey: process.env.KOMARI_API_KEY ?? env.KOMARI_API_KEY,
   };
 
