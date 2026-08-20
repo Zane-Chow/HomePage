@@ -260,7 +260,7 @@ function setupInfraGlobe(): void {
 
 async function mountGlobeWhenReady(container: HTMLElement, canvasMount: HTMLElement): Promise<void> {
   const snapshot = await infraSnapshotPromise;
-  if (!snapshot.regionBreakdown.length) return;
+  if (!snapshot.regionBreakdown.length && !snapshot.nodes.length && !snapshot.nodeLocations.length) return;
   const { mountGlobe } = await import("./globe");
   container.classList.add("has-live");
   mountGlobe(canvasMount, snapshot);

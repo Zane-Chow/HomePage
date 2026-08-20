@@ -1,5 +1,0 @@
-User-agent: *
-Allow: /
-
-Sitemap: https://www.zhouhaoze.com/sitemap.xml
-Sitemap: https://www.zhouhaoze.cn/sitemap-cn.xml

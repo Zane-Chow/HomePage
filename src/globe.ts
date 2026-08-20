@@ -16,9 +16,44 @@ interface GlobePoint {
 }
 
 function buildPoints(snapshot: InfraSnapshot): GlobePoint[] {
+  const locationsById = new Map(snapshot.nodeLocations.map((location) => [location.uuid, location]));
+  const points = snapshot.nodes.flatMap((node) => {
+    const location = locationsById.get(node.uuid);
+    if (location) {
+      const place = [location.city, location.country].filter(Boolean).join(", ");
+      return [{ lat: location.lat, lng: location.lng, name: place ? `${node.name} · ${place}` : node.name, count: 1 }];
+    }
+    const fallback = flagToRegionInfo(node.region);
+    return fallback ? [{ lat: fallback.lat, lng: fallback.lng, name: node.name, count: 1 }] : [];
+  });
+
+  if (points.length) return spreadOverlappingPoints(points);
   return snapshot.regionBreakdown.flatMap(({ flag, count }) => {
     const info = flagToRegionInfo(flag);
     return info ? [{ lat: info.lat, lng: info.lng, name: info.name, count }] : [];
+  });
+}
+
+function spreadOverlappingPoints(points: GlobePoint[]): GlobePoint[] {
+  const groups = new Map<string, GlobePoint[]>();
+  for (const point of points) {
+    const key = `${point.lat.toFixed(3)},${point.lng.toFixed(3)}`;
+    const group = groups.get(key) ?? [];
+    group.push(point);
+    groups.set(key, group);
+  }
+
+  return Array.from(groups.values()).flatMap((group) => {
+    if (group.length === 1) return group;
+    return group.map((point, index) => {
+      const angle = (index / group.length) * Math.PI * 2;
+      const radius = 0.28 + Math.floor(index / 8) * 0.12;
+      return {
+        ...point,
+        lat: Math.max(-89.9, Math.min(89.9, point.lat + Math.sin(angle) * radius)),
+        lng: point.lng + Math.cos(angle) * radius,
+      };
+    });
   });
 }
 
@@ -61,6 +96,8 @@ export function mountGlobe(container: HTMLElement, snapshot: InfraSnapshot): () 
   container.replaceChildren(renderer.domElement);
   renderer.domElement.style.cursor = "grab";
   renderer.domElement.setAttribute("aria-label", "Interactive globe showing server regions");
+  renderer.domElement.dataset.nodeCount = String(points.length);
+  renderer.domElement.dataset.preciseLocationCount = String(snapshot.nodeLocations.length);
 
   scene.add(new THREE.AmbientLight(0xffffff, 1.1));
   const frontLight = new THREE.DirectionalLight(0xffffff, 0.65);
@@ -97,7 +134,10 @@ export function mountGlobe(container: HTMLElement, snapshot: InfraSnapshot): () 
     .labelsData(points)
     .labelLat("lat")
     .labelLng("lng")
-    .labelText((d) => `${(d as GlobePoint).name} · ${(d as GlobePoint).count}`)
+    .labelText((d) => {
+      const point = d as GlobePoint;
+      return point.count > 1 ? `${point.name} · ${point.count}` : point.name;
+    })
     .labelSize(1.15)
     .labelColor(() => textColor)
     .labelDotRadius(0.32)

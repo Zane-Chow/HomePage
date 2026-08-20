@@ -7,11 +7,11 @@
   "nav.langToggle": "Switch language",
 
   "hero.eyebrow": "Student / Developer",
-  "hero.name": "Haoze Zhou",
+  "hero.name": "ZaneChow",
   "hero.tagline": "CS undergraduate at Universiti Malaya, building and running a few of my own services on the side.",
   "hero.cta": "View projects",
   "hero.more": "About me",
-  "hero.note": "Currently running 38 servers across 19 regions, live-monitored via Komari.",
+  "hero.note": "Currently maintaining multiple servers across several regions, live-monitored via Komari.",
   "hero.stat.servers": "Servers",
   "hero.stat.regions": "Regions",
   "hero.stat.projects": "Projects",
@@ -61,5 +61,5 @@
   "contact.github": "GitHub",
   "contact.telegram": "Telegram",
 
-  "footer.text": "© 2026 Haoze Zhou"
+  "footer.text": "© 2026 ZaneChow"
 }

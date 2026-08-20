@@ -1,6 +1,7 @@
 import en from "./locales/en.json";
 import zh from "./locales/zh.json";
 import { updateSeo } from "./seo";
+import { IS_CN_SITE } from "./site-config";
 
 export type Lang = "en" | "zh";
 
@@ -9,7 +10,7 @@ const dictionaries: Record<Lang, Record<string, string>> = { en, zh };
 const STORAGE_KEY = "pw-lang";
 
 function detectLang(): Lang {
-  if (window.location.hostname.endsWith(".cn")) return "zh";
+  if (IS_CN_SITE) return "zh";
   const stored = localStorage.getItem(STORAGE_KEY);
   if (stored === "en" || stored === "zh") return stored;
   return navigator.language.toLowerCase().startsWith("zh") ? "zh" : "en";
