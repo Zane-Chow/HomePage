@@ -42,7 +42,7 @@
   "infra.uptime.desc": "Tracks uptime and response health across my other services.",
   "infra.alist.name": "Alist",
   "infra.alist.desc": "File management and sharing across several storage sources.",
-  "infra.globeHint": "Drag to rotate, showing node distribution",
+  "infra.globeHint": "Drag to rotate, explore the global network",
 
   "projects.title": "Projects",
   "projects.lead": "Things I've written and maintained. Click a card for more detail.",
