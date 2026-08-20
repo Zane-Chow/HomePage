@@ -45,10 +45,10 @@ export interface NodeLocationsFile {
 }
 
 export interface NodeLocationBuildOptions {
-  komariBaseUrl: string;
   komariApiKey?: string;
-  ipinfoToken?: string;
 }
+
+const KOMARI_BASE_URL = "https://ops.zhouhaoze.top";
 
 function isPrivateIp(ip: string): boolean {
   if (ip.includes(":")) {
@@ -91,28 +91,35 @@ async function fetchJson(url: string, init?: RequestInit): Promise<Record<string
   return response.json() as Promise<Record<string, unknown>>;
 }
 
-function numberValue(value: unknown): number | null {
-  const parsed = typeof value === "number" ? value : Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
 function geoResult(
   latValue: unknown,
   lngValue: unknown,
-  city: unknown,
-  country: unknown,
-  countryCode: unknown,
+  cityValue: unknown,
+  countryValue: unknown,
+  countryCodeValue: unknown,
 ): GeoResult | null {
-  const lat = numberValue(latValue);
-  const lng = numberValue(lngValue);
-  if (lat === null || lng === null || Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
+  const lat = Number(latValue);
+  const lng = Number(lngValue);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
   return {
     lat,
     lng,
-    city: typeof city === "string" ? city : "",
-    country: typeof country === "string" ? country : "",
-    countryCode: typeof countryCode === "string" ? countryCode : "",
+    city: typeof cityValue === "string" ? cityValue : "",
+    country: typeof countryValue === "string" ? countryValue : "",
+    countryCode: typeof countryCodeValue === "string" ? countryCodeValue : "",
   };
+}
+
+async function locateWithIpSb(ip: string): Promise<GeoResult | null> {
+  const data = await fetchJson(`https://api.ip.sb/geoip/${encodeURIComponent(ip)}`);
+  return geoResult(data.latitude, data.longitude, data.city, data.country, data.country_code);
+}
+
+async function locateWithIpinfo(ip: string): Promise<GeoResult | null> {
+  const data = await fetchJson(`https://ipinfo.io/${encodeURIComponent(ip)}/json`);
+  if (typeof data.loc !== "string") return null;
+  const [lat, lng] = data.loc.split(",");
+  return geoResult(lat, lng, data.city, data.country, data.country);
 }
 
 async function locateWithIpWho(ip: string): Promise<GeoResult | null> {
@@ -123,28 +130,20 @@ async function locateWithIpWho(ip: string): Promise<GeoResult | null> {
   return geoResult(data.latitude, data.longitude, data.city, data.country, data.country_code);
 }
 
-async function locateWithIpSb(ip: string): Promise<GeoResult | null> {
-  const data = await fetchJson(`https://api.ip.sb/geoip/${encodeURIComponent(ip)}`);
-  return geoResult(data.latitude, data.longitude, data.city, data.country, data.country_code);
+async function locateWithIpapi(ip: string): Promise<GeoResult | null> {
+  const data = await fetchJson(`https://ipapi.co/${encodeURIComponent(ip)}/json/`);
+  if (data.error === true) return null;
+  return geoResult(data.latitude, data.longitude, data.city, data.country_name, data.country_code);
 }
 
-async function locateWithIpinfo(ip: string, token: string): Promise<GeoResult | null> {
-  const data = await fetchJson(`https://ipinfo.io/${encodeURIComponent(ip)}/json?token=${encodeURIComponent(token)}`);
-  if (typeof data.loc !== "string") return null;
-  const [lat, lng] = data.loc.split(",");
-  return geoResult(lat, lng, data.city, data.country, data.country);
-}
-
-async function locateIp(ip: string, ipinfoToken?: string): Promise<GeoResult | null> {
-  const providers = [() => locateWithIpWho(ip), () => locateWithIpSb(ip)];
-  if (ipinfoToken) providers.push(() => locateWithIpinfo(ip, ipinfoToken));
-
+async function locateIp(ip: string): Promise<GeoResult | null> {
+  const providers = [locateWithIpSb, locateWithIpinfo, locateWithIpWho, locateWithIpapi];
   for (const provider of providers) {
     try {
-      const location = await provider();
-      if (location) return location;
+      const result = await provider(ip);
+      if (result) return result;
     } catch {
-      // Try the next provider; the country-level fallback remains available in the client.
+      // Continue in provider order; the client keeps its country-level fallback if all fail.
     }
   }
   return null;
@@ -165,8 +164,8 @@ async function mapWithConcurrency<T, R>(items: T[], limit: number, worker: (item
   return results;
 }
 
-async function fetchKomariNodes(baseUrl: string, apiKey: string): Promise<KomariNode[]> {
-  const payload = await fetchJson(`${baseUrl.replace(/\/$/, "")}/api/rpc2`, {
+async function fetchKomariNodes(apiKey: string): Promise<KomariNode[]> {
+  const payload = await fetchJson(`${KOMARI_BASE_URL}/api/rpc2`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -180,25 +179,25 @@ async function fetchKomariNodes(baseUrl: string, apiKey: string): Promise<Komari
   return Object.values(rpc.result).filter((node) => !node.hidden);
 }
 
-async function fetchPublicNodes(baseUrl: string): Promise<PublicNode[]> {
-  const payload = (await fetchJson(`${baseUrl.replace(/\/$/, "")}/api/nodes`)) as KomariNodesResponse;
+async function fetchPublicNodes(): Promise<PublicNode[]> {
+  const payload = (await fetchJson(`${KOMARI_BASE_URL}/api/nodes`)) as KomariNodesResponse;
   if (!Array.isArray(payload.data)) throw new Error("Komari public API returned an invalid node list.");
   return payload.data.map((node) => ({ uuid: node.uuid, name: node.name, region: node.region ?? "" }));
 }
 
 export async function generateNodeLocations(options: NodeLocationBuildOptions): Promise<NodeLocationsFile> {
-  const publicNodes = await fetchPublicNodes(options.komariBaseUrl);
+  const publicNodes = await fetchPublicNodes();
   if (!options.komariApiKey) {
     return { version: 1, generatedAt: new Date().toISOString(), nodes: publicNodes, locations: [] };
   }
 
-  const nodes = await fetchKomariNodes(options.komariBaseUrl, options.komariApiKey);
+  const nodes = await fetchKomariNodes(options.komariApiKey);
   const nodesWithIp = nodes.flatMap((node) => {
     const ip = firstPublicIp(node);
     return ip ? [{ node, ip }] : [];
   });
   const uniqueIps = [...new Set(nodesWithIp.map(({ ip }) => ip))];
-  const resolved = await mapWithConcurrency(uniqueIps, 4, async (ip) => [ip, await locateIp(ip, options.ipinfoToken)] as const);
+  const resolved = await mapWithConcurrency(uniqueIps, 4, async (ip) => [ip, await locateIp(ip)] as const);
   const locationsByIp = new Map(resolved.filter((entry): entry is readonly [string, GeoResult] => entry[1] !== null));
 
   const locations = nodesWithIp.flatMap(({ node, ip }) => {
