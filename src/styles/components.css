@@ -465,15 +465,6 @@
 .infra__globe-canvas {
   position: absolute;
   inset: 0;
-  isolation: isolate;
-  background:
-    radial-gradient(circle at 50% 48%, color-mix(in srgb, var(--accent) 8%, transparent) 0, transparent 48%),
-    radial-gradient(circle at 50% 52%, color-mix(in srgb, var(--text) 4%, transparent) 0, transparent 66%);
-}
-
-.infra__globe-canvas canvas {
-  position: relative;
-  z-index: 1;
 }
 
 .infra__globe.has-live .infra__globe-fallback {

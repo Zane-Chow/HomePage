@@ -42,7 +42,7 @@
   "infra.uptime.desc": "监控各项服务的在线状态和响应情况。",
   "infra.alist.name": "Alist",
   "infra.alist.desc": "聚合多个存储来源的文件管理与分享服务。",
-  "infra.globeHint": "拖拽旋转,查看全球分布",
+  "infra.globeHint": "拖拽旋转,查看节点分布",
 
   "projects.title": "项目",
   "projects.lead": "一些自己写的和维护的项目,点击卡片可以看更多细节。",
